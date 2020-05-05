@@ -1,0 +1,24 @@
+---
+title: "Sibei"
+author: "Sibei Liu sl4660"
+date: "2020/5/4"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+```{r}
+data=read.csv("hurrican356.csv") %>% janitor::clean_names()
+df=data %>% separate(time,into=c("sign","date","hour","sign2"),sep = c(1,9,18)) %>% select(-sign,-sign2) %>% group_by(id) %>% 
+  mutate(
+    date=as.Date(date, '%y-%m-%d'),
+    begin=str_c(as.character(season),'0101'),
+    initial=as.Date(begin, "%Y%m%d"),
+    days=as.numeric(date-initial),
+    time=seq(0,(length(days)-1)*6,by=6)
+  ) %>% select(-begin,-initial) 
+```
+
