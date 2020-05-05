@@ -20,5 +20,6 @@ df=data %>% separate(time,into=c("sign","date","hour","sign2"),sep = c(1,9,18)) 
     days=as.numeric(date-initial),
     time=seq(0,(length(days)-1)*6,by=6)
   ) %>% select(-begin,-initial) 
+## time and days are created useful variables
 ```
 
