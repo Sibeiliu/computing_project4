@@ -1,0 +1,47 @@
+---
+title: "xj"
+author: "xj2249"
+date: "5/7/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(caret)
+
+```
+
+# prepare data
+```{r}
+df <- read_csv("hurrican356.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(time = gsub("[()]", "", time)) %>% 
+  group_by(id) %>% 
+  mutate(t = (strptime(time, "%Y-%m-%d %H:%M:%OS") - strptime(first(time), "%Y-%m-%d %H:%M:%OS")) 
+         %>% as.numeric(units = "hours"),
+         day = yday(as.POSIXct(time, format = "%Y-%m-%d %H:%M:%OS")),
+         nature = as.numeric(factor(nature)) - 1,
+         ) %>% 
+  filter( t%%6 == 0) %>% 
+  mutate(diff_wind = wind_kt - lag(wind_kt),
+         diff_lat = latitude - lag(latitude),
+         diff_lon = longitude - lag(longitude)) %>% 
+  ungroup() %>% 
+  na.omit()
+
+# create partition
+set.seed(21)
+trRows <- createDataPartition(1:n_distinct(df$id),
+                              p = 0.8,
+                              list = FALSE)
+train_df <- filter(df, id %in% unique(df$id)[trRows])
+test_df <- filter(df, id %in% unique(df$id)[-trRows])
+```
+
+# MCMC algorithm
+## Posterior
+```{r}
+
+```
+
