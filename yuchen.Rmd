@@ -11,6 +11,8 @@ library(tidyverse)
 library(caret)
 library(MASS)
 library(data.table)
+library(emdbook)
+library(truncnorm)
 ```
 
 ## data import
@@ -81,18 +83,17 @@ componentwiseMHstep <- function(pars, a, logp, data) {
     # (the current version of) res
     # only in position i
     prop[i] <- pars[i] + 2 * (runif(1) - 0.5) * a[i]
-    if(log(runif(1)) < logp(pars, data) - logp(pars, data))
+    if(log(runif(1)) < logp(prop, data) - logp(res, data))
       res[i] <- prop[i]
   }
   return(res)
 }
 
-opt.hur = function(nrep = 1000,a = rep(10, 9),data){
-  pars <- rep(0, 9)
+opt.hur = function(pars = rep(0, 9),nrep = 1000,a = rep(10, 9),data){
   chain <- matrix(NA, nrep, length(pars))
   for(i in 1:nrep) {
     newpars <- componentwiseMHstep(pars, a,
-    logp=logdens, data)
+    logdens, data)
     chain[i,] <- newpars
     pars <- newpars
   }
@@ -111,14 +112,33 @@ logdens = function(pars, data){
     ) %>% 
     drop_na()
   
-  loglikelihood = sum(data$loglikeli) + log(dmvnorm(beta, rep(0,7), diag(1,7))) + log(truncnorm(rho, a=0, b=1,mean=0.5,sd=1/5)) + log(dgamma(sigma,0.001,0.001))
+  loglikelihood = sum(data$loglikeli) + log(dmvnorm(beta, rep(0,7), diag(1,7))) + log(dtruncnorm(rho, a=0, b=1,mean=0.5,sd=1/5)) + log(dgamma(sigma,0.001,0.001))
   return(loglikelihood)
 }
+
 ```
 
 
 ```{r test}
-result = opt.hur(nrep = 1000,a = rep(10, 9),hurricanes.train)
+result = opt.hur(c(-28,0,0.015,0.009,0,0.01,1,0.1,1),nrep = 1000,a = c(0.01,0.0001,0.00001,0.01,0.001,0.01,0.01,0.02,0.0003),df.train)
 ```
 
+```{r plot}
+p <- c(paste0('plot_fluc',1:9))
+  for(i in 1:9){
+  assign(p[i],ggplot(data = chain, aes_string(x = "index", y = paste("V",i,sep=""))) + geom_point(color = rgb(.2, .4, .2, .5)) +
+    geom_line() + 
+    ggtitle(paste("variable",i,sep="")) + theme(plot.title = element_text(hjust = 0.5)))
+    get(p[i])
+  }
+plot_fluc1
+plot_fluc2
+plot_fluc3
+plot_fluc4
+plot_fluc5
+plot_fluc6
+plot_fluc7
+plot_fluc8
+plot_fluc9
+```
 
