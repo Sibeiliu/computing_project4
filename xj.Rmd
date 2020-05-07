@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(caret)
-
+library(emdbook)
 ```
 
 # prepare data
@@ -20,28 +20,86 @@ df <- read_csv("hurrican356.csv") %>%
   group_by(id) %>% 
   mutate(t = (strptime(time, "%Y-%m-%d %H:%M:%OS") - strptime(first(time), "%Y-%m-%d %H:%M:%OS")) 
          %>% as.numeric(units = "hours"),
-         day = yday(as.POSIXct(time, format = "%Y-%m-%d %H:%M:%OS")),
+         day = lubridate::yday(as.POSIXct(time, format = "%Y-%m-%d %H:%M:%OS")),
          nature = as.numeric(factor(nature)) - 1,
          ) %>% 
   filter( t%%6 == 0) %>% 
   mutate(diff_wind = wind_kt - lag(wind_kt),
          diff_lat = latitude - lag(latitude),
-         diff_lon = longitude - lag(longitude)) %>% 
+         diff_lon = longitude - lag(longitude),
+         y_obs = lead(wind_kt)) %>% 
   ungroup() %>% 
   na.omit()
+# t --> likelihood of t+6
 
 # create partition
-set.seed(21)
+set.seed(2)
 trRows <- createDataPartition(1:n_distinct(df$id),
                               p = 0.8,
                               list = FALSE)
+
 train_df <- filter(df, id %in% unique(df$id)[trRows])
 test_df <- filter(df, id %in% unique(df$id)[-trRows])
+
 ```
 
 # MCMC algorithm
-## Posterior
+## Posterior likelihood (some problem with the "loglikeli" part.)
 ```{r}
+logpost <- function(data,pars){
+  beta = pars[1:7] 
+  sigma =  pars[8] 
+  rho =  pars[9] 
+  
+  data = data %>% 
+    mutate(
+      mu = beta[1] + day*beta[2] + season*beta[3] + nature*beta[4] + diff_lat*beta[5] + diff_lon*beta[6] + diff_wind*beta[7] + rho*wind_kt,
+      loglikeli = log(dnorm(y_obs, mean = mu, sd = sigma)) 
+      #  the row of t is actually calculating likelihood of next t+6 point
+    ) %>% 
+    drop_na()
+  
+  loglikelihood = sum(data$loglikeli) + log(dmvnorm(beta, rep(0,7), diag(1,7))) + log(truncnorm::dtruncnorm(rho, a=0, b=1,mean=0.5,sd=1/5)) + log(dgamma(sigma,0.001,0.001))
+  return(loglikelihood)
+}
 
+# logpost(train_df,pars =  c(0.1,-1,0.01,-0.5,0.1,0.1,0.1,30,1))
 ```
+
+## Component-wise Metropolis-Hastings (1 step)
+```{r}
+MHstep <- function(data, pars,avec) {
+  res = pars
+  npars = length(pars) 
+  for (i in npars) {
+    prop = res
+    prop[i] = pars[i] + 2 * avec[i] * (runif(1) - 0.5)
+    
+    if(log(runif(1)) <  (logpost(data,prop) - logpost(data,res))){
+        res[i] <- prop[i]
+        }
+    }
+  return(res)
+}
+  
+ # MHstep(train_df, pars = c(rep(0.1,7),30,0.1), 
+ #    avec = c(0.05,0.001,0.01,0.05,0.05,0.1,0.01,0.1,0.01))
+```
+
+## Many steps
+```{r}
+nrep <- 2000
+
+mchain <- matrix(NA, nrow = nrep, ncol = 9)
+mchain[1,] <-  c(rep(1,7),30,0.1)
+
+for(i in 2:nrep) {
+  mchain[i,] =  MHstep(data = train_df, pars = mchain[i-1,],
+                      avec = c(0.05,0.001,0.01,0.05,0.05,0.1,0.01,0.1,0.01))
+}
+
+# n_distinct()
+```
+
+
 
