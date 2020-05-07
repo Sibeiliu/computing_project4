@@ -8,6 +8,12 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(MASS)
+library(dplyr)
+library(data.table)
+library(caret)
+library(emdbook)
+library(truncnorm)
 ```
 
 
@@ -22,5 +28,155 @@ df=data %>% separate(time,into=c("sign","date","hour","sign2"),sep = c(1,9,18)) 
     final=str_c(date,hour),
     time=as.numeric(difftime(final,final[1],units = "hour")),
   ) %>% select(-begin,-initial) %>% filter(time%%6==0)
+```
+
+```{r}
+df_all=split(df,df$id)
+set.seed(2)
+m=createDataPartition(1:356,p = 0.8,list = FALSE) %>% as.vector()
+
+train=NULL
+for(i in 1:max(m)){
+if(i %in% m){
+  train=rbind(train,df_all[[i]])
+}}
+
+train_df=split(train,train$id)
+# train_df created
+
+test_df=rbind(df_all[-m])
+```
+
+
+## from Xinru
+```{r}
+data=read.csv("hurrican356.csv") %>% janitor::clean_names()
+
+## select 80% hurricanes as train data set
+hurricanes = unique(as.character(data$id))
+set.seed(2)
+trRows <- createDataPartition(1:356,
+                              p = 0.8,
+                              list = FALSE)
+train_hurricanes = hurricanes[trRows]
+test_hurricanes = hurricanes[-trRows]
+
+df=data %>% separate(time,into=c("sign","date","hour","sign2"),sep = c(1,9,18)) %>% dplyr::select(-sign,-sign2) %>%
+  filter(hour == " 00:00:00" | hour == " 06:00:00" | hour == " 12:00:00" | hour == " 18:00:00") %>% 
+  group_by(id)  %>%  
+  mutate(
+    date=as.Date(date, '%y-%m-%d'),
+    begin=str_c(as.character(season),'0101'),
+    initial=as.Date(begin, "%Y%m%d"),
+    days=as.numeric(date-initial),
+    final=str_c(date,hour),
+    time=as.numeric(difftime(final,final[1],units = "hour")),
+    nature = as.numeric(nature)-1
+  ) %>% dplyr::select(-begin,-initial) 
+
+## DS ET NR SS TS
+
+df_train = df %>% 
+  filter(id %in% train_hurricanes) %>% 
+  mutate(
+    shift_lat = shift(latitude, fill=NA,type="lag"),
+    diff_lat = latitude - shift_lat,
+    shift_long = shift(longitude, fill=NA,type="lag"),
+    diff_long = longitude - shift_long,
+    shift_wind = shift(wind_kt, fill=NA,type="lag"),
+    diff_wind = wind_kt - shift_wind,
+  ) %>% 
+  drop_na()
+  
+
+df_test = df %>% 
+  filter(id %in% test_hurricanes)  %>% 
+  mutate(
+    shift_lat = shift(latitude, fill=NA,type="lag"),
+    diff_lat = latitude - shift_lat,
+    shift_long = shift(longitude, fill=NA,type="lag"),
+    diff_long = longitude - shift_long,
+    shift_wind = shift(wind_kt, fill=NA,type="lag"),
+    diff_wind = wind_kt - shift_wind,
+  ) %>% 
+  drop_na()
+
+## time, days and id are created useful variables
+
+
+```
+
+```{r}
+loglikelihood = NULL
+loglikeli_func = function(dat,parameter){
+  beta=parameter[1:7]
+  sigma=parameter[8]
+  rho=parameter[9]
+  dat = dat %>% 
+    mutate(
+      shift_wind_2 = shift(wind_kt),
+      mu = beta[1] + days*beta[2] + season*beta[3] + nature*beta[4] + diff_lat*beta[5] + diff_long*beta[6] + diff_wind*beta[7] + rho*shift_wind_2,
+      loglikeli = log(dnorm(wind_kt, mean = mu, sd = sigma)) 
+    ) %>% 
+    drop_na()
+  
+  loglikelihood = sum(dat$loglikeli) + log(dmvnorm(beta, rep(0,7), diag(1,7))) + log(dtruncnorm(rho, a=0, b=1,mean=0.5,sd=1/5)) + log(dgamma(sigma,0.001,0.001))
+  return(list(loglikelihood=loglikelihood,data=dat))
+}
+
+starting<- c(0.1,-1,0.5,-0.5,0.1,0.1,1,30,0.1)
+w=loglikeli_func(df_train,starting)
+```
+
+
+
+```{r}
+componentwiseMHstep <- function(dat,parameter,a) {
+p <- length(parameter)
+res <- parameter
+for(i in 1:p) {
+prop <- res
+prop[i] <- parameter[i] + 2 * (runif(1) - 0.5) * a[i]
+if(log(runif(1)) < loglikeli_func(dat,prop)$loglikelihood - loglikeli_func(dat,res)$loglikelihood)
+res[i] <- prop[i]
+}
+names(res)=c(str_c("beta",0:6),"sigma","rho")
+return(res)
+}
+
+componentwiseMHstep(df_train,c(0.1,-1,0.01,-0.5,0.1,0.1,0.1,30,1), a=c(0.05,0.001,0.01,0.05,0.05,0.1,0.01,0.1,0.01))
+```
+
+
+
+```{r}
+nrep <- 2000
+
+starting<- c(0.1,-1,0.01,-0.5,0.1,0.1,0.1,30,1)
+chain <- matrix(NA, nrep, length(starting))
+parameter=starting
+for(i in 1:nrep) {
+newx <- componentwiseMHstep(df_train,parameter, a=c(0.05,0.001,0.01,0.05,0.05,0.1,0.01,0.1,0.01))
+chain[i,] <- newx
+parameter <- newx}
+
+colnames(chain)=c(str_c("beta",0:6),"sigma","rho")
+ chain[1980:2000,]
+```
+
+```{r}
+length(unique(chain[,9]))
+```
+
+
+
+```{r}
+index=seq(1:5000,by=1)
+plot(chain[,1],)
+```
+
+
+```{r}
+ggplot()
 ```
 
