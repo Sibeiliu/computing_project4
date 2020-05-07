@@ -1,0 +1,120 @@
+---
+title: "code"
+author: "Qi Yuchen, yq2279"
+date: "2020/5/6"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(caret)
+library(MASS)
+library(data.table)
+```
+
+## data import
+
+```{r}
+df.raw = read.csv("hurrican356.csv") %>% 
+  janitor::clean_names()
+
+hurricanes = levels(df.raw$id)
+set.seed(2)
+trRows <- createDataPartition(1:356,
+                              p = 0.8,
+                              list = FALSE)
+hurricanes.train = hurricanes[trRows]
+hurricanes.test = hurricanes[-trRows]
+
+# from xinru
+df=df.raw %>% separate(time,into=c("sign","date","hour","sign2"),sep = c(1,9,18)) %>% dplyr::select(-sign,-sign2) %>%
+  filter(hour == " 00:00:00" | hour == " 06:00:00" | hour == " 12:00:00" | hour == " 18:00:00") %>% 
+  group_by(id)  %>%  
+  mutate(
+    date=as.Date(date, '%y-%m-%d'),
+    begin=str_c(as.character(season),'0101'),
+    initial=as.Date(begin, "%Y%m%d"),
+    days=as.numeric(date-initial),
+    final=str_c(date,hour),
+    time=as.numeric(difftime(final,final[1],units = "hour")),
+    nature = as.numeric(nature)-1
+  ) %>% dplyr::select(-begin,-initial) 
+
+## DS ET NR SS TS
+
+df.train = df %>% 
+  filter(id %in% hurricanes.train) %>% 
+  mutate(
+    shift_lat = shift(latitude, fill=NA,type="lag"),
+    diff_lat = latitude - shift_lat,
+    shift_long = shift(longitude, fill=NA,type="lag"),
+    diff_long = longitude - shift_long,
+    shift_wind = shift(wind_kt, fill=NA,type="lag"),
+    diff_wind = wind_kt - shift_wind,
+  ) %>% 
+  drop_na()
+  
+
+df.test = df %>% 
+  filter(id %in% hurricanes.test)  %>% 
+  mutate(
+    shift_lat = shift(latitude, fill=NA,type="lag"),
+    diff_lat = latitude - shift_lat,
+    shift_long = shift(longitude, fill=NA,type="lag"),
+    diff_long = longitude - shift_long,
+    shift_wind = shift(wind_kt, fill=NA,type="lag"),
+    diff_wind = wind_kt - shift_wind,
+  ) %>% 
+  drop_na()
+```
+
+
+## MCMC
+
+```{r}
+componentwiseMHstep <- function(pars, a, logp, data) {
+  k <- length(pars)
+  res <- pars
+  for(i in 1:k) {
+    prop <- res # prop should differ from
+    # (the current version of) res
+    # only in position i
+    prop[i] <- pars[i] + 2 * (runif(1) - 0.5) * a[i]
+    if(log(runif(1)) < logp(pars, data) - logp(pars, data))
+      res[i] <- prop[i]
+  }
+  return(res)
+}
+
+opt.hur = function(nrep = 1000,a = rep(10, 9),data){
+  pars <- rep(0, 9)
+  chain <- matrix(NA, nrep, length(pars$mu))
+  for(i in 1:nrep) {
+    newpars <- componentwiseMHstep(pars, a,
+    logp=logdens, data)
+    chain[i,] <- newpars
+    pars <- newpars
+  }
+}
+
+logdens = function(pars, data){
+  beta = pars[1:7]
+  sigma = pars[8]
+  rho = pars[9]
+  data = data %>% 
+    mutate(
+      shift_wind_2 = shift(wind_kt),
+      mu = beta[1] + days*beta[2] + season*beta[3] + nature*beta[4] + diff_lat*beta[5] + diff_long*beta[6] + diff_wind*beta[7] + rho*shift_wind_2,
+      loglikeli = log(dnorm(wind_kt, mean = mu, sd = sigma)) 
+    ) %>% 
+    drop_na()
+  
+  loglikelihood = sum(data$loglikeli) + log(dmvnorm(beta, rep(0,7), diag(1,7))) + log(truncnorm(rho, a=0, b=1,mean=0.5,sd=1/5)) + log(dgamma(sigma,0.001,0.001))
+  return(loglikelihood)
+}
+```
+
+
+
+
