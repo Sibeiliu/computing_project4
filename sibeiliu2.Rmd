@@ -1,12 +1,13 @@
 ---
-title: "Sibei"
+title: "sibei try2"
 author: "Sibei Liu sl4660"
-date: "2020/5/4"
+date: "2020/5/7"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(invgamma)
 library(tidyverse)
 library(MASS)
 library(dplyr)
@@ -14,6 +15,7 @@ library(data.table)
 library(caret)
 library(emdbook)
 library(truncnorm)
+library(ModelMetrics)
 ```
 
 
@@ -46,7 +48,6 @@ train_df=split(train,train$id)
 
 test_df=rbind(df_all[-m])
 ```
-
 
 ## from Xinru
 ```{r}
@@ -120,12 +121,12 @@ loglikeli_func = function(dat,parameter){
     ) %>% 
     drop_na()
   
-  loglikelihood = sum(dat$loglikeli) + log(dmvnorm(beta, rep(0,7), diag(1,7))) + log(dtruncnorm(rho, a=0, b=1,mean=0.5,sd=1/5)) + log(dgamma(sigma,0.001,0.001))
+  loglikelihood = sum(dat$loglikeli) + log(dmvnorm(beta, rep(0,7), diag(1,7))) + log(dtruncnorm(rho, a=0, b=1,mean=0.5,sd=1/5)) + log(dinvgamma(1/(sigma)^2, 0.001, 0.001))
   return(list(loglikelihood=loglikelihood,data=dat))
 }
 
-starting<- c(0.1,-1,0.5,-0.5,0.1,0.1,1,30,0.1)
-w=loglikeli_func(df_train,starting)
+starting<- c(-28,0,0.01,0.001,0.01,0.01,0.5,1,1)
+loglikeli_func(df_train,starting)$loglikelihood
 ```
 
 
@@ -144,39 +145,96 @@ names(res)=c(str_c("beta",0:6),"sigma","rho")
 return(res)
 }
 
-componentwiseMHstep(df_train,c(0.1,-1,0.01,-0.5,0.1,0.1,0.1,30,1), a=c(0.05,0.001,0.01,0.05,0.05,0.1,0.01,0.1,0.01))
+#componentwiseMHstep(df_train,c(0.1,-1,0.01,-0.5,0.1,0.1,0.1,30,1), a=c(0.05,0.001,0.01,0.05,0.05,0.1,0.01,0.1,0.01))
 ```
 
 
-
 ```{r}
-nrep <- 2000
+nrep <- 5000
 
-starting<- c(0.1,-1,0.01,-0.5,0.1,0.1,0.1,30,1)
+starting<-   c(-28,0,0.015,0.009,0,0.01,1,0.1,1)
 chain <- matrix(NA, nrep, length(starting))
 parameter=starting
 for(i in 1:nrep) {
-newx <- componentwiseMHstep(df_train,parameter, a=c(0.05,0.001,0.01,0.05,0.05,0.1,0.01,0.1,0.01))
+newx <- componentwiseMHstep(df_train[1000,],parameter, a=c(0.001,0.00001,0.00001,0.01,0.001,0.01,0.01,0.02,0.0003))
 chain[i,] <- newx
 parameter <- newx}
 
 colnames(chain)=c(str_c("beta",0:6),"sigma","rho")
- chain[1980:2000,]
+ #chain[4980:5000,]
 ```
 
 ```{r}
-length(unique(chain[,9]))
+
+length(unique(chain[,2]))
+```
+
+```{r}
+df_chain=as.data.frame(chain)
+index=seq(1,5000,by=1)
+df_chain=cbind(df_chain,index)
+
+var_name=c(str_c("beta",0:6),"sigma","rho")
+
+
+p1 <- c(paste0('plot1_fluc',1:9))
+  for(i in 1:9){
+  assign(p1[i],ggplot(data = df_chain, aes_string(x = "index", y = df_chain[,i]))  +
+    geom_line() + 
+    ggtitle(var_name[i]) + theme(plot.title = element_text(hjust = 0.5)))
+    get(p1[i])
+  }
+plot1_fluc1
+plot1_fluc2
+plot1_fluc3
+plot1_fluc4
+plot1_fluc5
+plot1_fluc6
+plot1_fluc7
+plot1_fluc8
+plot1_fluc9
+
+
+## last several index to check if it enters the stationary 
+p <- c(paste0('plot_fluc',1:9))
+  for(i in 1:9){
+  assign(p[i],ggplot(data = df_chain[4500:5000,], aes_string(x = index[4500:5000], y = df_chain[4500:5000,i]))  +
+    geom_line() + 
+    ggtitle(var_name[i]) + theme(plot.title = element_text(hjust = 0.5)))
+    get(p[i])
+  }
+plot_fluc1
+plot_fluc2
+plot_fluc3
+plot_fluc4
+plot_fluc5
+plot_fluc6
+plot_fluc7
+plot_fluc8
+plot_fluc9
+```
+
+```{r}
+mean_para=NULL
+lower_par=NULL
+upper_par=NULL
+for (i in 1:9 ){
+mean_para[i]=mean(chain[4000:5000,i])
+lower_par[i]=quantile(chain[4000:5000,i],probs=0.025)
+upper_par[i]=quantile(chain[4000:5000,i],probs=0.975)}
+
+results=data.frame(mean=mean_para,lower=lower_par,upper=upper_par)
+row.names(results)=c(str_c("beta",0:6),"sigma","rho")
 ```
 
 
-
 ```{r}
-index=seq(1:5000,by=1)
-plot(chain[,1],)
-```
+# to do prediction
+pred_test=df_test %>% mutate(
+  mu_pred = results[1,1] + days*results[2,1] + season*results[3,1] + nature*results[4,1] + diff_lat*results[5,1] + diff_long*results[6,1] + diff_wind*results[7,1] + results[8,1]*shift_wind,
+  y_hat=mu_pred+shift_wind+rnorm(1,mean=0,sd=results[9,1])
+)
 
-
-```{r}
-ggplot()
+MSE=mse(unlist(pred_test[,10]) %>% as.vector(),unlist(pred_test[,21]) %>% as.vector())
 ```
 
