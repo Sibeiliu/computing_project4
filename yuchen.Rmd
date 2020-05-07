@@ -72,7 +72,7 @@ df.test = df %>%
 
 ## MCMC
 
-```{r}
+```{r functions}
 componentwiseMHstep <- function(pars, a, logp, data) {
   k <- length(pars)
   res <- pars
@@ -89,13 +89,14 @@ componentwiseMHstep <- function(pars, a, logp, data) {
 
 opt.hur = function(nrep = 1000,a = rep(10, 9),data){
   pars <- rep(0, 9)
-  chain <- matrix(NA, nrep, length(pars$mu))
+  chain <- matrix(NA, nrep, length(pars))
   for(i in 1:nrep) {
     newpars <- componentwiseMHstep(pars, a,
     logp=logdens, data)
     chain[i,] <- newpars
     pars <- newpars
   }
+  chain
 }
 
 logdens = function(pars, data){
@@ -116,5 +117,8 @@ logdens = function(pars, data){
 ```
 
 
+```{r test}
+result = opt.hur(nrep = 1000,a = rep(10, 9),hurricanes.train)
+```
 
 
