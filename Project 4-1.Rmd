@@ -136,7 +136,7 @@ $\pi(\boldsymbol{\beta})$ is jointly normal with mean 0 and variance $diag(1, p)
 
 We assume that $\pi(\rho)$ follows a trucated normal  $N_{[0,1]}(0.5, 1/5)$ 
  
- $\pi(\Sigma^{-1})$ follows a inverse-gamma $(0.001, 0.001)$
+ $\pi(\sigma^{-1})$ follows a inverse-gamma $(0.001, 0.001)$
 
 
 # Choose either the full model or simplied model, and complete the following  tasks:

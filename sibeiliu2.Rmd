@@ -16,6 +16,7 @@ library(caret)
 library(emdbook)
 library(truncnorm)
 library(ModelMetrics)
+library(patchwork)
 ```
 
 
@@ -151,15 +152,15 @@ componentwiseMHstep(df_train,c(0.1,-1,0.01,-0.5,0.1,0.1,0.1,3,1), a=c(0.05,0.001
 
 ```{r}
 
-df_train=df_train[1:1000,]
+df_train=df_train 
 
-nrep <- 10000
+nrep <- 5000
 
-starting<-   c(-18,-0.2,0.01,1,0,0.1,0.1,7,0.1)
+starting<-   c(-26,0,0.012,0.009,0,0.01,1,0.1,1)
 chain <- matrix(NA, nrep, length(starting))
 parameter=starting
 for(i in 1:nrep) {
-newx <- componentwiseMHstep(df_train,parameter, a=c(0.01,0.01,0.0001,0.04,0.005,0.008,0.005,0.01,0.001))
+newx <- componentwiseMHstep(df_train,parameter, a=c(0.1,0.0001,0.0001,0.01,0.001,0.01,0.001,0.02,0.0003))
 chain[i,] <- newx
 parameter <- newx}
 
@@ -173,16 +174,15 @@ length(unique(chain[,2]))
 ```
 
 ```{r}
+chain=read_csv("chain") %>% dplyr::select(-X1)
 df_chain=as.data.frame(chain)
-index=seq(1,10000,by=1)
-df_chain=cbind(df_chain,index)
 
-var_name=c(str_c("beta",0:6),"sigma","rho")
-
+colnames(df_chain)=c(str_c("beta",0:6),"sigma","rho","index")
+var_name=c(str_c("beta",0:6),"sigma","rho","index")
 
 p1 <- c(paste0('plot1_fluc',1:9))
   for(i in 1:9){
-  assign(p1[i],ggplot(data = df_chain, aes_string(x = "index", y = df_chain[,i]))  +
+  assign(p1[i],ggplot(data = df_chain, aes_string(x = "index" , y = df_chain[,i]))  +
     geom_line() + 
     ggtitle(var_name[i]) + theme(plot.title = element_text(hjust = 0.5)))
     get(p1[i])
@@ -197,6 +197,9 @@ plot1_fluc7
 plot1_fluc8
 plot1_fluc9
 
+plot1_fluc1+plot1_fluc2+plot1_fluc3
+plot1_fluc4+plot1_fluc5+plot1_fluc6
+plot1_fluc7+plot1_fluc8+plot1_fluc9
 
 ## last several index to check if it enters the stationary 
 p <- c(paste0('plot_fluc',1:9))
@@ -222,12 +225,13 @@ mean_para=NULL
 lower_par=NULL
 upper_par=NULL
 for (i in 1:9 ){
-mean_para[i]=mean(chain[4000:5000,i])
-lower_par[i]=quantile(chain[4000:5000,i],probs=0.025)
-upper_par[i]=quantile(chain[4000:5000,i],probs=0.975)}
+mean_para[i]=mean(df_chain[10000:20000,i])
+lower_par[i]=quantile(df_chain[10000:20000,i],probs=0.025)
+upper_par[i]=quantile(df_chain[10000:20000,i],probs=0.975)}
 
 results=data.frame(mean=mean_para,lower=lower_par,upper=upper_par)
 row.names(results)=c(str_c("beta",0:6),"sigma","rho")
+results %>% knitr::kable()
 ```
 
 
@@ -239,5 +243,11 @@ pred_test=df_test %>% mutate(
 )
 
 MSE=mse(unlist(pred_test[,10]) %>% as.vector(),unlist(pred_test[,21]) %>% as.vector())
+
+ggplot(data=pred_test)+geom_line(aes(x=x,y=wind_kt),color="black")+geom_line(aes(x=x,y=y_hat),color="blue")+labs(title="Fitted speed and observed speed",x="",y="Speed")
+
+MSE
 ```
+
+
 
