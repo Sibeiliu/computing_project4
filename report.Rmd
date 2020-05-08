@@ -87,7 +87,7 @@ Table 1. MSE of test data
 
 # Discussion
 
-A possible explanation for the chain fail to converge to the desired stationary distribution for $\beta_0$ to $\beta_2$ is that the starting point we choose is not good enough. This issue may be solved by starting at a point, like the mode, known to have reasonably high probability, but no such point is known. An alternative solution is to run the chain for many steps so it can converge and use the burn-in method. However this may need a large number of iterations which exceeds our computer capacity, and usually it should not need over 10,000 iterations to enter the stationary condition, so the inappropriate "moving length" $a$ may account for the unsatisfactory plots of $\beta_0$ to $\beta_2$.
+A possible explanation for the chain fail to converge to the desired stationary distribution for $\beta_0$ to $\beta_2$ is that the starting point we choose is not good enough. This issue may be solved by starting at a point, like the mode, known to have reasonably high probability, but no such point is known. An alternative solution is to run the chain for many steps so it can converge and use the burn-in method. However this may need a large number of iterations which exceeds our computer capacity, and usually it should not need over 10,000 iterations to enter the stationary condition, so the inappropriate "moving length" $a$ may account for the unsatisfactory plots of $\beta_0$ to $\beta_2$. We tried different margin, such as several numbers between 0.01 and 0.2 for $\beta_0$, but none of these numbers performed well. As it took a long time to generate a chain each time, we could not explore more chloices of a, which may provide a better solution.
 
 
 
