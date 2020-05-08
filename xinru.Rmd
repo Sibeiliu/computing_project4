@@ -13,6 +13,11 @@ library(dplyr)
 library(data.table)
 library(caret)
 library(truncnorm)
+library(tmvtnorm)
+library(foreach)
+library(parallel) # one of the core R packages
+library(doParallel)
+library(actuar) 
 ```
 
 ```{r}
@@ -70,7 +75,6 @@ df_test = df %>%
 ```
 
 ```{r}
-loglikelihood = NULL
 loglikeli_func = function(dat,beta,sigma, rho){
   dat = dat %>% 
     mutate(
@@ -80,15 +84,70 @@ loglikeli_func = function(dat,beta,sigma, rho){
     ) %>% 
     drop_na()
   
-  loglikelihood = sum(dat$loglikeli) + log(dmvnorm(beta, rep(0,7), diag(1,7))) + log(truncnorm(rho, a=0, b=1,mean=0.5,sd=1/5)) + log(dgamma(sigma,0.001,0.001))
+  loglikelihood = sum(dat$loglikeli) + log(dmvnorm(beta, rep(0,7), diag(1,7))) + log(dtruncnorm(rho, a=0, b=1,mean=0.5,sd=1/5)) +  log(dinvgamma(1/(sigma)^2, 0.001, 0.001))
   return(loglikelihood)
 }
 ```
 
-```{r}
-prop <- 1 + (runif(1) - 0.5) * 2
-prop
+```{r，eval=FALSE}
+componentwiseMHstep <- function(x, a, logp, dat) {
+p <- length(x)
+res <- x
+for(i in 1:p) {
+prop <- res
+prop[i] <- x[i] + 2 * (runif(1) - 0.5) * a[i]
+if(log(runif(1)) < loglikeli_func(dat, prop[1:7],prop[8],prop[9]) - loglikeli_func(dat, res[1:7],res[8],res[9]))
+  res[i] <- prop[i] 
+}
+  return(res)
+}
+
+## 1: -37 2:-0.5   3: a is 1  4: a is 5, -3   5: -1   6: a is 5, 0  7: a is 2, 1  8: a is 2, 30  9: a is 2, 1 
+
+nrep <- 20000
+x = c(-30,-0.1,0.04,-1,-0.5,0,1,5,1)
+x2 = c(-38.5,-0.1,0.03,-0.7,-0.5,0,1,4.2,1)
+x3 = c(-38,-0.05,0.01,-0.35,-0.3,0,1,2,1)
+x4 = c(-38,-0.005,0.02,0,0,0,1,0.25,1)
+x5 = c(-28,0,0.015,0.009,0,0.01,1,0.1,1)
+x = c(-26,0,0.012,0.009,0,0.01,1,0.1,1)
+a1 =c(0.1,0.01,0.1,0.1,0.1,0.2,0.1,0.2,0.1)
+a2=c(0.1,0.001,0.001,0.1,0.4,0.4,0.1,0.01,0.001)
+
+chain <- matrix(NA, nrep, length(x))
+for(i in 1:nrep) {
+  newx <- componentwiseMHstep(x, a=c(0.1,0.0001,0.0001,0.01,0.001,0.01,0.001,0.02,0.0003),
+    logp=loglikeli_func, dat=df_train)
+  chain[i,] <- newx
+  x <- newx
+  print(i)
+}
+
+chain = as.data.frame(chain) %>% 
+  mutate(
+    index = row_number()
+  )
+
+write.csv(chain, "chain")
 
 
+p <- c(paste0('plot_fluc',1:9))
+  for(i in 1:9){
+  assign(p[i],ggplot(data = chain, aes_string(x = "index", y = paste("V",i,sep=""))) + geom_point(color = rgb(.2, .4, .2, .5)) +
+    geom_line() + 
+    ggtitle(paste("variable",i,sep="")) + theme(plot.title = element_text(hjust = 0.5)))
+    get(p[i])
+  }
+plot_fluc1
+plot_fluc2
+plot_fluc3
+plot_fluc4
+plot_fluc5
+plot_fluc6
+plot_fluc7
+plot_fluc8
+plot_fluc9
 ```
+
+
 
