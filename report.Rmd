@@ -52,7 +52,7 @@ Compare the $\alpha(\lambda|\boldsymbol\theta)$ with the random drawed uniform(0
 The starting value is (-26,0,0.012,0.009,0,0.01,1,0.1,1) and search window 
 a = c(0.1,0.0001,0.0001,0.01,0.001,0.01,0.001,
 
-0.02,0.0003), which corresponds to $\beta_0,\ \beta_1\ \beta_2\ \beta_3\ \beta_4\ \beta_5\ \beta_6\ \ \sigma\ \rho$. After 20000 iteration, we get the following path plots:
+0.02,0.0003), which corresponds to $\beta_0,\ \beta_1,\ \beta_2,\ \beta_3,\ \beta_4,\ \beta_5,\ \beta_6,\ \sigma,\ \rho,$. After 20000 iteration, we get the following path plots:
 
 \begin{center}
 \includegraphics{./plots/beta0-2.jpeg}
@@ -84,3 +84,10 @@ From above, we can tell that $\beta_3-\beta_5$ and $\sigma,\ \rho$ all almost en
 \begin{center}
 Table 1. MSE of test data
 \end{center}
+
+# Discussion
+
+A possible explanation for the chain fail to converge to the desired stationary distribution for $\beta_0$ to $\beta_2$ is that the starting point we choose is not good enough. This issue may be solved by starting at a point, like the mode, known to have reasonably high probability, but no such point is known. An alternative solution is to run the chain for many steps so it can converge and use the burn-in method. However this may need a large number of iterations which exceeds our computer capacity, and usually it should not need over 10,000 iterations to enter the stationary condition, so the inappropriate "moving length" $a$ may account for the unsatisfactory plots of $\beta_0$ to $\beta_2$.
+
+
+
