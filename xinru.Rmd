@@ -129,15 +129,27 @@ chain = as.data.frame(chain) %>%
   )
 
 write.csv(chain, "chain")
+```
 
 
+```{r}
+chain = read_csv("./chain")
 p <- c(paste0('plot_fluc',1:9))
-  for(i in 1:9){
+  for(i in 1:7){
   assign(p[i],ggplot(data = chain, aes_string(x = "index", y = paste("V",i,sep=""))) + geom_point(color = rgb(.2, .4, .2, .5)) +
     geom_line() + 
-    ggtitle(paste("variable",i,sep="")) + theme(plot.title = element_text(hjust = 0.5)))
-    get(p[i])
+    ggtitle(paste("Beta",i-1,sep="")) + theme(plot.title = element_text(hjust = 0.5)))
   }
+
+assign(p[8],ggplot(data = chain, aes_string(x = "index", y = paste("V",i,sep=""))) + geom_point(color = rgb(.2, .4, .2, .5)) +
+    geom_line() + 
+    ggtitle("Sigma") + theme(plot.title = element_text(hjust = 0.5)))
+
+assign(p[9],ggplot(data = chain, aes_string(x = "index", y = paste("V",i,sep=""))) + geom_point(color = rgb(.2, .4, .2, .5)) +
+    geom_line() + 
+    ggtitle("Rho") + theme(plot.title = element_text(hjust = 0.5)))
+
+
 plot_fluc1
 plot_fluc2
 plot_fluc3
@@ -147,7 +159,40 @@ plot_fluc6
 plot_fluc7
 plot_fluc8
 plot_fluc9
+
+## use the last 5000 numbers
+
+chain_new = chain[15000:20000,]
+
+q <- c(paste0('plot_final',1:9))
+  for(i in 1:7){
+  assign(q[i],ggplot(data = chain_new, aes_string(x = "index", y = paste("V",i,sep=""))) + geom_point(color = rgb(.2, .4, .2, .5)) +
+    geom_line() + 
+    ggtitle(paste("Beta",i-1,sep="")) + theme(plot.title = element_text(hjust = 0.5)))
+  }
+
+assign(q[8],ggplot(data = chain_new, aes_string(x = "index", y = paste("V",i,sep=""))) + geom_point(color = rgb(.2, .4, .2, .5)) +
+    geom_line() + 
+    ggtitle("Sigma") + theme(plot.title = element_text(hjust = 0.5)))
+
+assign(q[9],ggplot(data = chain_new, aes_string(x = "index", y = paste("V",i,sep=""))) + geom_point(color = rgb(.2, .4, .2, .5)) +
+    geom_line() + 
+    ggtitle("Rho") + theme(plot.title = element_text(hjust = 0.5)))
+
+plot_final1
+plot_final2
+plot_final3
+plot_final4
+plot_final5
+plot_final6
+plot_final7
+plot_final8
+plot_final9
+
+
+
 ```
+
 
 
 
