@@ -117,7 +117,7 @@ loglikeli_func = function(dat,parameter){
     mutate(
       shift_wind_2 = shift(wind_kt),
       mu = beta[1] + days*beta[2] + season*beta[3] + nature*beta[4] + diff_lat*beta[5] + diff_long*beta[6] + diff_wind*beta[7] + rho*shift_wind_2,
-      loglikeli = log(dnorm(wind_kt, mean = mu, sd = sigma)) 
+      loglikeli = -(wind_kt-mu)^2/(2*(sigma^2))-log(sqrt(2*pi)*sigma)
     ) %>% 
     drop_na()
   
@@ -145,18 +145,21 @@ names(res)=c(str_c("beta",0:6),"sigma","rho")
 return(res)
 }
 
-#componentwiseMHstep(df_train,c(0.1,-1,0.01,-0.5,0.1,0.1,0.1,30,1), a=c(0.05,0.001,0.01,0.05,0.05,0.1,0.01,0.1,0.01))
+componentwiseMHstep(df_train,c(0.1,-1,0.01,-0.5,0.1,0.1,0.1,3,1), a=c(0.05,0.001,0.01,0.05,0.05,0.1,0.01,0.1,0.01))
 ```
 
 
 ```{r}
-nrep <- 5000
 
-starting<-   c(-28,0,0.015,0.009,0,0.01,1,0.1,1)
+df_train=df_train[1:1000,]
+
+nrep <- 10000
+
+starting<-   c(-18,-0.2,0.01,1,0,0.1,0.1,7,0.1)
 chain <- matrix(NA, nrep, length(starting))
 parameter=starting
 for(i in 1:nrep) {
-newx <- componentwiseMHstep(df_train[1000,],parameter, a=c(0.001,0.00001,0.00001,0.01,0.001,0.01,0.01,0.02,0.0003))
+newx <- componentwiseMHstep(df_train,parameter, a=c(0.01,0.01,0.0001,0.04,0.005,0.008,0.005,0.01,0.001))
 chain[i,] <- newx
 parameter <- newx}
 
@@ -171,7 +174,7 @@ length(unique(chain[,2]))
 
 ```{r}
 df_chain=as.data.frame(chain)
-index=seq(1,5000,by=1)
+index=seq(1,10000,by=1)
 df_chain=cbind(df_chain,index)
 
 var_name=c(str_c("beta",0:6),"sigma","rho")
@@ -198,7 +201,7 @@ plot1_fluc9
 ## last several index to check if it enters the stationary 
 p <- c(paste0('plot_fluc',1:9))
   for(i in 1:9){
-  assign(p[i],ggplot(data = df_chain[4500:5000,], aes_string(x = index[4500:5000], y = df_chain[4500:5000,i]))  +
+  assign(p[i],ggplot(data = df_chain[3500:4000,], aes_string(x = index[3500:4000], y = df_chain[3500:4000,i]))  +
     geom_line() + 
     ggtitle(var_name[i]) + theme(plot.title = element_text(hjust = 0.5)))
     get(p[i])
