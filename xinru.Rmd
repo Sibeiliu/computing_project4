@@ -133,19 +133,22 @@ write.csv(chain, "chain")
 
 
 ```{r}
-chain = read_csv("./chain")
+chain = read_csv("./chain") %>% 
+  dplyr::select(-X1) 
+  
+colnames(chain)=c(str_c("beta",0:6),"sigma","rho","index")
 p <- c(paste0('plot_fluc',1:9))
   for(i in 1:7){
-  assign(p[i],ggplot(data = chain, aes_string(x = "index", y = paste("V",i,sep=""))) + geom_point(color = rgb(.2, .4, .2, .5)) +
+  assign(p[i],ggplot(data = chain, aes_string(x = "index", y = paste("beta",i-1,sep=""))) + geom_point(color = rgb(.2, .4, .2, .5)) +
     geom_line() + 
     ggtitle(paste("Beta",i-1,sep="")) + theme(plot.title = element_text(hjust = 0.5)))
   }
 
-assign(p[8],ggplot(data = chain, aes_string(x = "index", y = paste("V",i,sep=""))) + geom_point(color = rgb(.2, .4, .2, .5)) +
+assign(p[8],ggplot(data = chain, aes_string(x = "index", y = "sigma")) + geom_point(color = rgb(.2, .4, .2, .5)) +
     geom_line() + 
     ggtitle("Sigma") + theme(plot.title = element_text(hjust = 0.5)))
 
-assign(p[9],ggplot(data = chain, aes_string(x = "index", y = paste("V",i,sep=""))) + geom_point(color = rgb(.2, .4, .2, .5)) +
+assign(p[9],ggplot(data = chain, aes_string(x = "index", y = "rho")) + geom_point(color = rgb(.2, .4, .2, .5)) +
     geom_line() + 
     ggtitle("Rho") + theme(plot.title = element_text(hjust = 0.5)))
 
@@ -160,34 +163,19 @@ plot_fluc7
 plot_fluc8
 plot_fluc9
 
+ggsave( "./plot/beta0.pdf",plot_fluc1)
+ggsave( "./plot/beta1.pdf",plot_fluc2)
+ggsave( "./plot/beta2.pdf",plot_fluc3)
+ggsave( "./plot/beta3.pdf",plot_fluc4)
+ggsave( "./plot/beta4.pdf",plot_fluc5)
+ggsave( "./plot/beta5.pdf",plot_fluc6)
+ggsave( "./plot/beta6.pdf",plot_fluc7)
+ggsave( "./plot/sigma.pdf",plot_fluc8)
+ggsave( "./plot/rho.pdf",plot_fluc9)
+
+
 ## use the last 5000 numbers
 
-chain_new = chain[15000:20000,]
-
-q <- c(paste0('plot_final',1:9))
-  for(i in 1:7){
-  assign(q[i],ggplot(data = chain_new, aes_string(x = "index", y = paste("V",i,sep=""))) + geom_point(color = rgb(.2, .4, .2, .5)) +
-    geom_line() + 
-    ggtitle(paste("Beta",i-1,sep="")) + theme(plot.title = element_text(hjust = 0.5)))
-  }
-
-assign(q[8],ggplot(data = chain_new, aes_string(x = "index", y = paste("V",i,sep=""))) + geom_point(color = rgb(.2, .4, .2, .5)) +
-    geom_line() + 
-    ggtitle("Sigma") + theme(plot.title = element_text(hjust = 0.5)))
-
-assign(q[9],ggplot(data = chain_new, aes_string(x = "index", y = paste("V",i,sep=""))) + geom_point(color = rgb(.2, .4, .2, .5)) +
-    geom_line() + 
-    ggtitle("Rho") + theme(plot.title = element_text(hjust = 0.5)))
-
-plot_final1
-plot_final2
-plot_final3
-plot_final4
-plot_final5
-plot_final6
-plot_final7
-plot_final8
-plot_final9
 
 
 

@@ -1,7 +1,7 @@
 ---
-title: "method and results"
-author: "Sibei Liu sl4660"
-date: "2020/5/8"
+title: "Baysian Modeling of Hurrican trajectories"
+author: "Group11: Sibei Liu, Xue Jin, Yuchen Qi, Xinru Wang"
+date: "05/14/2020"
 output: pdf_document
 ---
 
@@ -10,6 +10,31 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 ```
 
+# Introduction
+North Atlantic hurricanes claim a large toll in terms of fatalities and economic damage every year. Therefore, efforts to abtain deeper understanding of their physical mechanisms such as wind speed which is of top priority for the development and tracking is very important for both researchers and societal and economic repercussions.
+
+Wind speed for a specific time point is related to the day of year at this time point, the calenda year of the hurricane, type of hurrican, change of latitude, longitude, wind speed, and wind speed before this time point. Using this relationship, we designed a MCMC algorithm to build a simplified Bayesian model for predicting wind speed, and then use these posteri means to track the remaining 20% test hurricanes. 
+
+## Objectives
+To predict future spped of each hurricane, our project maimly focused on using MCMC algorithm to abtain each coefficients in the simplified Bayesian model and then calculate mean square errors using test hurricanes. 
+
+## Dataset 
+The dataset contains information of 356 hurricanes in the North Atlantic area since 1989. For all the storms, their location (longitude \& latitude) and maximum wind speed were recorded every 6 hours. The data includes the following variables 
+
+1. **ID**:  ID of the hurricans
+2. **Season**: In which \textbf{year} the hurricane occurred 
+3. **Month**: In which \textbf{month} the hurricane occurred 
+4. **Nature**:  Nature of the hurricane 
+  + ET: Extra Tropical
+  + DS: Disturbance
+  + NR: Not Rated
+  + SS: Sub Tropical
+  + TS: Tropical Storm
+5. **time**: dates and time of the record  
+6. **Latitude** and **Longitude**:  The location of  a hurricane check point 
+7. **Wind.kt**  Maximum wind speed (in Knot) at each check point 
+
+We tidied our data and filtered the data point which is not the integer multiple of six, and randomly assign 80% of hurricanes to be our training data, remaining is our test data. 
 
 # Method
 
