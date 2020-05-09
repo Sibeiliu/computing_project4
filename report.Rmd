@@ -107,7 +107,7 @@ From above, we can tell that $\beta_3-\beta_5$ and $\sigma,\ \rho$ all almost en
 \includegraphics{./plots/parameters.png}
 \end{center}
 \begin{center}
-Table 1. MSE of test data
+Table 1. Mean and quantile of parameters
 \end{center}
 
 # Discussion
